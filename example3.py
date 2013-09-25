@@ -7,5 +7,5 @@ my_dict={'A':input_string.count('A'),'C':input_string.count('C'),'G':input_strin
 # print dict
 print my_dict
 
-
+#here is a comment to test github branching
 
