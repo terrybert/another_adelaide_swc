@@ -1,6 +1,6 @@
 reader=open('pg76.txt', 'r')
 line=reader.readline()
-
+# some comment
 total_length=0
 line_count=0
 while line !='':
