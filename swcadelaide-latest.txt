@@ -27,7 +27,7 @@ Day 1
 (12:30-1:00 lunch)
 1:00-2:00 Python control flow
 2:00-3:00 Python functions and modules
-(3:00-3:30 break) 
+(3:00-3:30 break)
 3:30-4:30 classes and objects
 
 
@@ -668,6 +668,9 @@ test = [
     ['GTCNGAT', {'G': 2, 'T':2, 'C':1,'A':1}']
 ]
 
+
+
+
 On importing:
 Yesterday we covered the import keyword very briefly. Some import tricks:
 import x
@@ -805,11 +808,254 @@ git commit -m "adding the python files that we created up till now in Adelaide w
 # "git commit" without the "-m" will open your default text editor. This may be nano, vi, vim, gedit
 git log # see all commits with commit messages, dates etc. (use 'q' to exit)
 git diff # When run in the top level directory of the repo will show you a diff between your working directory and the local whole repository
+git push # push all commited changes to the remote repository. The remote repository needn't be on github, it is simply remote to your local machine. i.e. it could be another server within your institution which is not publically accessible.
 
+Default names on GIT:
+master = local repo
+origin/master = remote repo on github
 
 Git exercise 1
 
 Create a README file, and commit it to your local repository
 
 Extra credit: export the Etherpad, and commit that too
+
+Git exercise 2
+
+Create a Github-repository called "adelaide_swc", push your changes there
+
+git remote add origin https://github.com/nataliethorne/adelaide_swc.git
+git push -u origin master
+
+Add collaborator
+
+#then collaborator can do:
+git clone https://github.com/nataliethorne/adelaide_swc.git
+
+# Colaborator can make a change to a file and commit a change
+# change in working directory (cloned directory)
+# then commit to stage
+# now use git push to put into github repository
+
+# person A (not collaborator) does git pull
+
+
+
+new person A: create a new repository on GitHub, push your local repository
+new person B: clone, make a change, push
+new person A: pull the change
+
+green stickies when you're done!
+
+github can integrate with continuous integration systems such as Travis. This means any pull request automatically triggers a run of the test suite. If the test suite still passes, we can be more confident that the pull request didn't break anything.
+
+git branch # lists all the available branches. The one prefixed with "*" is the branch on which the local repo is currently on
+git branch remove_caching
+git checkout remove_caching  # switch to that new branch
+git add dna_string.py
+git commit -m "Removing caching"
+
+# merge to master branch
+git checkout master  # reverted back to original branch called "master"
+git merge remove_caching
+git branch -D remove_caching  # now that changes are ok and have been merged can delete branch
+
+Commenting
+ '''  '''
+TODO:   these are automatically highlighted in Gedit
+
+
+
+#Github material from the second day (25th) and some from the first day (24th) (clone the repository):
+https://github.com/bendmorris/adelaide_swc
+
+
+
+Make
+
+(make sure tabs not spaces otherwise Makefile doesn't work)
+to get the data files and script:
+
+git clone https://github.com/bendmorris/make_tutorial
+
+create a file called "Makefile" in the same directory (make_tutorial)
+
+General Makefile format:
+target: dependencies
+    command
+
+
+input files: FASTA
+
+1. align the sequences (muscle)
+        muscle -in bombycilla_co1.fasta -out bombycilla_co1.fasta.aln
+2. convert the alignment to Phylip format
+        python -c "import Bio.AlignIO; Bio.AlignIO.convert('bombycilla_co1.fasta.aln', 'fasta', 'bombycilla_co1.phy', 'phylip-relaxed')"
+3. generate a tree (RAxML)
+        raxmlHPC -m GTRCAT -n bombycilla -p 10000 -s bombycilla_co1.phy
+        mv RAxML_result.bombycilla bombycilla_co1.new
+4. draw_tree.py
+        python draw_tree.py bombycilla_co1.new bombycilla_co1.png
+
+Redo the above using a Makefile
+# lets remove all the previously created files
+rm *.aln *.phy* *.png RAxML* *.new
+
+Step 1:
+#the Makefile (important: tabs instead of spaces! Check gedit's Edit > Preferences > Editor Tab):
+bombycilla_co1.fasta.aln: bombycilla_co1.fasta
+    muscle -in bombycilla_co1.fasta -out bombycilla_co1.fasta.aln
+
+# run make with the name of the target
+make bombycilla_co1.fasta.aln  # this is the output file we want
+
+Step 2:
+# Add the next step to the Makefile:
+bombycilla_co1.phy: bombycilla_co1.fasta.aln
+    python -c "import Bio.AlignIO; Bio.AlignIO.convert('bombycilla_co1.fasta.aln', 'fasta', 'bombycilla_co1.phy', 'phylip-relaxed')"
+
+Remove everything again:
+rm *.aln *.phy* *.png RAxML* *.new
+
+and run make again:
+make bombycilla_co1.phy
+
+Step 3:
+# Add the next step to the Makefile:
+bombycilla_co1.new: bombycilla_co1.phy
+    rm -f RAxML*
+    raxmlHPC -m GTRCAT -n bombycilla -p 10000 -s bombycilla_co1.phy
+    mv RAxML_result.bombycilla bombycilla_co1.new
+
+Step 4:
+# Notice the two dependencies - any changes to draw_tree.py will cause a re-run of this step
+bombycilla_co1.png: bombycilla_co1.new draw_tree.py
+    python draw_tree.py bombycilla_co1.new bombycilla_co1.png
+
+Remove everything again:
+rm *.aln *.phy* *.png RAxML* *.new
+
+Run:
+make bombycilla_co1.png
+
+Step 5: Add a "clean" command, no dependencies
+
+clean:
+    rm -f *.aln *.phy* *.png RAxML* *.new
+
+Step 6: Add an "all" command which is the default target, the first rule (has to be at the top)
+
+all: bombycilla_co1.png
+
+Step 7: Generalize your Makefile, replace bombycilla_co1 by %
+The % is make-syntax for wildcard
+
+%.fasta.aln: %.fasta
+    muscle -in $< -out $@
+
+%: wildcard
+$@ : the target
+$< : the first dependency
+$^: all dependencies
+
+
+
+%.fasta.aln: %.fasta
+    muscle -in $< -out $@
+
+%.phy: %.fasta.aln
+    python -c "import Bio.AlignIO; Bio.AlignIO.convert('$<', 'fasta', '$@', 'phylip-relaxed')"
+
+%.new: %.phy
+    rm -f RAxML*
+    raxmlHPC -m GTRCAT -n $@ -p 10000 -s $<
+    mv RAxML_result.$@ $@
+
+
+%.png: %.new draw_tree.py
+    python draw_tree.py $< $@
+
+
+all: $(patsubst %.fasta, %.png, $(wildcard *.fasta))
+
+
+When using rules that contain wildcards with Make (like %.new), Make will automatically delete the intermediate files - which means that the entire pipeline will need to be re-run if you make a change to one of the dependencies. You can prevent this using a special target called ".SECONDARY":
+
+.SECONDARY: %.fasta.aln %.phy %.new
+
+Anything listed as a dependency of ".SECONDARY" will not be deleted. This way when I make a change to the draw_tree.py script, only the last step will be re-run.
+
+
+
+==============================
+COLLABORATIVE GROUP EXCERSIES
+==============================
+Collaborative Group Excercises
+
+1) Get together in groups of 3 people. If you have people from the same institution as yourself, you may be more productive to work with them.
+2) Between you, decide on a project you're going to tackle together. This could be one of the ideas your team mates brings to the table or the sickle project described below. (15mins)
+  a) Consider the size of the project - you only have 3 hours to work on it.
+  b) You need to be able to design example/mock input data for boundary case testing
+  c) You need to be able to use Github for code collaboration
+  d) You should comment/document your code
+3) For the first 30min you are not allowed to write any code, other than tests and documentation i.e. no implementation
+  a) discuss and plan steps, coordinate effort
+  b) write unit tests
+  c) create empty classes with stub methods
+  d) set up a GitHub repository
+  e) create a README file
+  f) Makefile
+4) Before the afternoon coffee break you will provide another group with the github URL for your code
+  a) Your code should be easy for another group to use. Hint: use a README file and a Makefile to simplify things for them.
+  b) The other group will clone your repository and attempt to improve your code with additional test, documentation etc
+5) The trainers will assess your project, and your contributions to another, in order to determine which team has demonstrated their understanding of the topics covered in the bootcamp.
+6) A prize of $50 Amazon vouchers will be awarded to the members of the winning team. This will probably be decided over the weekend or early next week.
+
+
+Example Project: Sickle
+https://github.com/najoshi/sickle
+A windowed adaptive trimming tool for FASTQ files using quality. Implement features of this tool using Python
+
+==============================
+Please enter your team details below. Include the project you initiated and the project against which you contributed code. We'll use this to judge which team wins the prize!!
+==============================
+Nathan Watson-Haigh
+Created: https://github.com/nathanhaigh/adelaide_swc_cge
+Team: Nathan, Ute, Sergio
+Repo you helped improve: https://github.com/SamBuckberry/pysickle
+
+Sam Buckberry
+Created: https://github.com/SamBuckberry/pysickle
+Team: Angus, Sam, John, Elena
+Repo that we helped improve: https://github.com/nataliethorne/GCcorrect
+
+Natalie Thorne
+Created: https://github.com/nataliethorne/GCcorrect
+Team Natalie, Ingrid, Duy
+Revised: https://github.com/nathanhaigh/adelaide_swc_cge
+
+Jimmy Breen
+Team: Jimmy, Oliver, Terry and Luis
+Created: https://github.com/jimmybgammyknee/group_makefile_fastq
+Revised: https://github.com/annettemcgrath/Workshop_Exercise
+
+Rad Suchecki
+Team: Andy, Juan Carlos, Rad
+Created: https://github.com/huun/swc_group
+Revised: NEED more time!!No you don't https://github.com/jimmybgammyknee/group_makefile_fastq
+Cloned: https://github.com/huun/group_makefile_fastq
+
+Annette McGrath
+Team: Klara, Faribroz, Annette
+Created:https://github.com/annettemcgrath/Workshop_Exercise
+Revised:https://github.com/huun/swc_group
+
+1) Team leaders need to do a github "fork" to clone the other teams repo into your own github repository list.
+  a) This gives you the ability to write/commit changes to your repository when you don't have the same rights to the other team's repo.
+  b) Add the reast of your team members as collaborators on this project to allow them to commit changes to it.
+2) Get the SSH clone URL from your newly forked repo e.g. git@github.com:nathanhaigh/pysickle.git
+3) You and your team members can now go to a terminal and clone your repo. e.g. git clone git@github.com:nathanhaigh/pysickle.git
+4) start to make changes, and other improvements. As you go, commit and push the changes up to your repo on github.
+
+
 
